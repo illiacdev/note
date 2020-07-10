@@ -10,18 +10,17 @@ jar {
 ~~~
 
 ***
-## gradle 빌드후 jar 파일 복사
+## gradle 빌드후 jar 파일 복사, 이름변경
 
 ~~~
-jar {
- 
-    doLast{
+doLast{
         copy {
             from "${jar.archivePath}"
-            into "target/dist"
+            into "dist"
+            rename { String filename ->
+                filename.replace(filename,"app.jar")
+            }
         }
-
     }
-}
 ~~~
 ***
