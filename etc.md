@@ -12,3 +12,10 @@ netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 conne
 ### docker-compose-window pre release
 
 https://github.com/docker/compose/releases
+
+
+***
+###  docker linux 실행유지
+tail -f /dev/null
+
+
