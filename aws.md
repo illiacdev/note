@@ -20,3 +20,7 @@ aws quick start
 
 
 bit.ly/ARCLAB
+
+***
+
+ecsworkshop.com /eksworkshop.com
