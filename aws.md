@@ -1,4 +1,4 @@
-***
+﻿***
 
 aws region table
 https://aws.amazon.com/ko/about-aws/global-infrastructure/regional-product-services/
@@ -20,3 +20,16 @@ https://medium.com/serverlessguru/access-an-aws-rds-db-in-a-private-subnet-from-
 ***
 ### SSM access Private subnet 
 https://musma.github.io/2019/11/29/about-aws-ssm.html
+~~~
+
+aws database playbook
+
+aws quick start
+
+
+bit.ly/ARCLAB
+bit.ly/TESSLAB
+
+***
+
+ecsworkshop.com /eksworkshop.com

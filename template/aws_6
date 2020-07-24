@@ -1,0 +1,257 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Lab template
+Parameters:
+  UserId:
+    Default: awsstudent
+    Type: String
+  S3PathPrefix:
+    Type: String
+    Description: >-
+      The path prefix where lab resources are stored (Leading and trailing slash
+      required!)
+    Default: courses/ILT-TF-100-ARCHIT/v6.6.3/lab-6-serverless
+  S3ResourceBucket:
+    Type: String
+    Description: S3 Bucket of where to pull lab resources from
+    Default: '-tcprod'
+Resources:
+  InventoryDynamoDBTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: Inventory
+      AttributeDefinitions:
+        - AttributeName: Store
+          AttributeType: S
+        - AttributeName: Item
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Store
+          KeyType: HASH
+        - AttributeName: Item
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c5aabef2-9a2d-478b-bee6-232d56603ad0
+  LambdaLoadInventoryRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: Lambda-Load-Inventory-Role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+        - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
+      Policies:
+        - PolicyName: CWLogsPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+                Effect: Allow
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 3270ef76-3b88-48ae-9690-5e8c86e85350
+  LambdaCheckStockRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: Lambda-Check-Stock-Role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c2cab343-932b-4ee3-9bf0-197e9e5ef53c
+  IdentityPool:
+    Type: 'AWS::Cognito::IdentityPool'
+    Properties:
+      IdentityPoolName: mxnetServerlessIdentity
+      AllowUnauthenticatedIdentities: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: b90f3a12-0cec-4f2e-9ad5-832a90602f7c
+  UnauthenticatedRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref IdentityPool
+              'ForAnyValue:StringLike':
+                'cognito-identity.amazonaws.com:amr': unauthenticated
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c4535334-3054-4749-8565-ef6e311de5fc
+  UnauthenticatedRolePolicies:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: UseDynamoDB
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'mobileanalytics:PutEvents'
+              - 'cognito-sync:*'
+              - 'dynamodb:*'
+            Resource:
+              - '*'
+      Roles:
+        - !Ref UnauthenticatedRole
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 530e3dbd-215b-4779-95f0-0f3668c54714
+  IdentityPoolRole:
+    Type: 'AWS::Cognito::IdentityPoolRoleAttachment'
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        unauthenticated: !GetAtt 
+          - UnauthenticatedRole
+          - Arn
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 26da2073-6957-4ca9-9cf3-7d7e8ce08836
+  ReadOnlyGroup:
+    Type: 'AWS::IAM::Group'
+    Properties:
+      GroupName: QLReadOnly
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: f3fee828-00a9-4c66-9da5-13d6e75626df
+  GroupAssignment:
+    Type: 'AWS::IAM::UserToGroupAddition'
+    DependsOn: ReadOnlyGroup
+    Properties:
+      GroupName: QLReadOnly
+      Users:
+        - !Ref UserId
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 589c7e67-4ac6-470f-9f60-f16a9ccde676
+Outputs:
+  Dashboard:
+    Description: Link to inventory dashboard
+    Value: !Sub >-
+      https://us-west-2-tcprod.s3.amazonaws.com/courses/ILT-TF-100-ARCHIT/v6.6.3/lab-6-serverless/web/inventory.htm?region=${AWS::Region}&poolId=${IdentityPool}
+  IdentityPoolId:
+    Value: !Ref IdentityPool
+    Description: IdentityPool ID
+Metadata:
+  'AWS::CloudFormation::Designer':
+    f3fee828-00a9-4c66-9da5-13d6e75626df:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 60
+        'y': 90
+      z: 1
+      embeds: []
+    589c7e67-4ac6-470f-9f60-f16a9ccde676:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 90
+      z: 1
+      embeds: []
+      dependson:
+        - f3fee828-00a9-4c66-9da5-13d6e75626df
+    b90f3a12-0cec-4f2e-9ad5-832a90602f7c:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 60
+        'y': 210
+      z: 1
+      embeds: []
+    c4535334-3054-4749-8565-ef6e311de5fc:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 210
+      z: 1
+      embeds: []
+    26da2073-6957-4ca9-9cf3-7d7e8ce08836:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 90
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - b90f3a12-0cec-4f2e-9ad5-832a90602f7c
+    530e3dbd-215b-4779-95f0-0f3668c54714:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 210
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - c4535334-3054-4749-8565-ef6e311de5fc
+    c2cab343-932b-4ee3-9bf0-197e9e5ef53c:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 60
+        'y': 330
+      z: 1
+      embeds: []
+    3270ef76-3b88-48ae-9690-5e8c86e85350:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 180
+        'y': 330
+      z: 1
+      embeds: []
+    c5aabef2-9a2d-478b-bee6-232d56603ad0:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 330
+      z: 1
+      embeds: []
