@@ -10,3 +10,13 @@ aws well architected
 bit.ly/saaguide
 
 https://github.com/serithemage/AWSCertifiedSolutionsArchitectUnofficialStudyGuide
+
+
+~~~
+
+aws database playbook
+
+aws quick start
+
+
+bit.ly/ARCLAB
