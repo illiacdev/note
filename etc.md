@@ -19,3 +19,6 @@ https://github.com/docker/compose/releases
 tail -f /dev/null
 
 
+***
+putty 디폴트 포그라운드 amber color
+255 190 27
