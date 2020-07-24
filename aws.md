@@ -20,6 +20,7 @@ aws quick start
 
 
 bit.ly/ARCLAB
+bit.ly/TESSLAB
 
 ***
 
