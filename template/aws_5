@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates IAM Role with policy for Lambda function to create default VPC
+
+Resources:
+
+  natEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  LambdaVPCRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: LambdaLogToCloudWatch
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+        - PolicyName: Lambda_VPC_Policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: Stmt1506457719000
+                Effect: Allow
+                Action:
+                  - 'ec2:CreateDefaultVpc'
+                  - 'ec2:DescribeVpcs'
+                Resource:
+                  - '*'
+
+  LambdaCreateDefaultVPC:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: defaultvpc
+      Handler: defaultvpc.lambda_handler
+      MemorySize: 512
+      Timeout: 120
+      Role: !GetAtt 
+        - LambdaVPCRole
+        - Arn
+      Code:
+        S3Bucket: !Join 
+          - ''
+          - - !Ref 'AWS::Region'
+            - '-tcprod'
+        S3Key: courses/SharedLambda/defaultvpc.zip
+      Runtime: python2.7
+
+  MyDefaultVPC:
+    Type: 'Custom::MyDefaultVPC'
+    Properties:
+      ServiceToken: !GetAtt 
+        - LambdaCreateDefaultVPC
+        - Arn
+        
+  ReadOnlyGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: QLReadOnly
+      ManagedPolicyArns: [ "arn:aws:iam::aws:policy/ReadOnlyAccess" ]
+  GroupAssignment:
+    Type: AWS::IAM::UserToGroupAddition
+    DependsOn: ReadOnlyGroup
+    Properties:
+      GroupName: QLReadOnly
+      Users:
+        - awsstudent
